@@ -30,6 +30,10 @@ python -m src.server
 http://0.0.0.0:7070/template_fast_api/v1/#/
 ```
 
+# Запуск BD
+```asciidoc
+python /src/models_base_create.py
+```
 
 # Запуск контейнера публично
 

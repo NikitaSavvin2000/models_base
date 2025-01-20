@@ -1,13 +1,11 @@
-from typing import Annotated, List
-
-# import pandas as pd
+import json
 import uvicorn
-from fastapi import FastAPI, HTTPException, Body
-from fastapi.middleware.cors import CORSMiddleware
 
+from utils.models_write import save_model
 from src.config import logger, public_or_local
-from src.models.schemes import HellowRequest
-from src.utils.greeting import hellow_names
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+
 
 if public_or_local == 'LOCAL':
     url = 'http://localhost'
@@ -18,39 +16,63 @@ origins = [
     url
 ]
 
-app = FastAPI(docs_url="/template_fast_api/v1/", openapi_url='/template_fast_api/v1/openapi.json')
+app = FastAPI(docs_url="/models_base/docs", openapi_url='/models_base/openapi.json')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+example = {
+    "description": "test"
+}
 
 
-@app.post("/template_fast_api/v1/greetings")
-async def inputation(body: Annotated[
-    HellowRequest, Body(
-        example={"names": ['Sasha', 'Nikita', 'Kristina']})]):
+@app.post("/models_base/save")
+async def save_model_endpoint(
+        pipeline: str = Form(...),
+        metrics: str = Form(...),
+        name: str = Form(...),
+        lag: int = Form(...),
+        point_per_call: int = Form(...),
+        description: str = Form(...),
+        file: UploadFile = File(...),
+):
     try:
-        names = body.names
-        if names:
-            res = hellow_names(names)
-            return res
-        else:
-            logger.error("Something happened during creation of the search table")
+        try:
+            pipeline_dict = json.loads(pipeline)
+            metrics_dict = json.loads(metrics)
+        except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=400,
-                detail="Bad Request",
-                headers={"X-Error": "Something happened during creation of the search table"},
+                detail=f"Invalid JSON in pipeline or metrics: {e}"
             )
+
+        model_data = await file.read()
+
+        model_id = await save_model(
+            model_data=model_data,
+            pipeline=pipeline_dict,
+            metrics=metrics_dict,
+            name=name,
+            lag=lag,
+            point_per_call=point_per_call,
+            description=description
+        )
+
+        return {"model_id": model_id}
+
+    except HTTPException as e:
+        raise e
+
     except Exception as ApplicationError:
-        logger.error(ApplicationError.__repr__())
+        logger.error(f"Unexpected error: {ApplicationError}")
         raise HTTPException(
-            status_code=400,
-            detail="Unknown Error",
-            headers={"X-Error": f"{ApplicationError.__repr__()}"},
+            status_code=500,
+            detail="Internal Server Error",
+            headers={"X-Error": str(ApplicationError)},
         )
 
 

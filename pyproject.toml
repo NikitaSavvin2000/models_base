@@ -17,6 +17,9 @@ dependencies = [
     "uvicorn>=0.28.0",
     "pandas>=2.2.1",
     "coverage==7.4.4",
+    "sqlalchemy>=2.0.37",
+    "tensorflow>=2.18.0",
+    "python-multipart>=0.0.20",
 ]
 requires-python = ">=3.9"
 readme = "README.md"

@@ -5,7 +5,7 @@ from utils.models_write import save_model
 from src.config import logger, public_or_local
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-
+from utils.remove_model import delete_model_by_id
 
 if public_or_local == 'LOCAL':
     url = 'http://localhost'
@@ -75,6 +75,22 @@ async def save_model_endpoint(
             headers={"X-Error": str(ApplicationError)},
         )
 
+@app.delete("/models_base/delete_model/")
+async def delete_model_endpoint(model_id: str = Form(...)):
+    try:
+        message = await delete_model_by_id(model_id)
+        return message
+
+    except HTTPException as e:
+        raise e
+
+    except Exception as ApplicationError:
+        logger.error(f"Unexpected error: {ApplicationError}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal Server Error",
+            headers={"X-Error": str(ApplicationError)},
+        )
 
 @app.get("/")
 def read_root():
